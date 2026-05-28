@@ -389,13 +389,14 @@ namespace RNS {
 		inline static const std::set<Bytes>& discovery_pr_tags() { return _discovery_pr_tags; }
 		inline static const std::set<Destination>& control_destinations() { return _control_destinations; }
 		inline static const std::set<Bytes>& control_hashes() { return _control_hashes; }
-		inline static const std::set<Bytes>& packet_hashlist() { return _packet_hashlist; }
 		inline static const std::list<PacketReceipt>& receipts() { return _receipts; }
 		inline static const TunnelTable& tunnels() { return _tunnels; }
 
 		inline static uint32_t packets_sent() { return _packets_sent; }
 		inline static uint32_t packets_received() { return _packets_received; }
 		inline static uint32_t destinations_added() { return _destinations_added; }
+
+		inline static size_t packet_hashlist_size() { return _packet_hashlist.size() + _packet_hashlist_prev.size(); }
 
 	private:
 		// CBA MUST use references to interfaces here in order for virtul overrides for send/receive to work
@@ -405,7 +406,8 @@ namespace RNS {
 		// CBA TODO: Reconsider using std::set for enforcing uniqueness. Maybe consider std::map keyed on hash instead
 		static std::set<Link> _pending_links;		// Links that are being established
 		static std::set<Link> _active_links;		// Links that are active
-		static std::set<Bytes> _packet_hashlist;	// A list of packet hashes for duplicate detection
+		static std::set<Bytes> _packet_hashlist;	// Current generation of packet hashes for duplicate detection
+		static std::set<Bytes> _packet_hashlist_prev;	// Previous generation of packet hashes for duplicate detection
 		static std::list<PacketReceipt> _receipts;	// Receipts of all outgoing packets for proof processing
 
 		static AnnounceTable _announce_table;	// A table for storing announces currently waiting to be retransmitted
@@ -500,6 +502,23 @@ namespace RNS {
 		static uint8_t _path_store_segment_count;
 		static PathStore _path_store;
 		static NewPathTable _new_path_table;
+
+		inline static bool _has_packet_hash(const Bytes& hash) {
+			return _packet_hashlist.find(hash) != _packet_hashlist.end() ||
+					_packet_hashlist_prev.find(hash) != _packet_hashlist_prev.end();
+		}
+
+		inline static void _rotate_packet_hashlist() {
+			_packet_hashlist_prev.swap(_packet_hashlist);
+			_packet_hashlist.clear();
+		}
+
+		inline static void _remember_packet_hash(const Bytes& hash) {
+			_packet_hashlist.insert(hash);
+			if (_hashlist_maxsize > 0 && _packet_hashlist.size() > (_hashlist_maxsize / 2)) {
+				_rotate_packet_hashlist();
+			}
+		}
 	};
 
 	template <typename M, typename S> 

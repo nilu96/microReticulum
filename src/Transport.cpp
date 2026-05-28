@@ -65,6 +65,7 @@ using namespace RNS::Persistence;
 /*static*/ std::set<Link> Transport::_pending_links;
 /*static*/ std::set<Link> Transport::_active_links;
 /*static*/ std::set<Bytes> Transport::_packet_hashlist;
+/*static*/ std::set<Bytes> Transport::_packet_hashlist_prev;
 /*static*/ std::list<PacketReceipt> Transport::_receipts;
 
 /*static*/ Transport::AnnounceTable Transport::_announce_table;
@@ -562,12 +563,6 @@ DestinationEntry empty_destination_entry;
 				_announces_last_checked = OS::time();
 			}
 
-			// Cull the packet hashlist if it has reached its max size
-			if (_packet_hashlist.size() > _hashlist_maxsize) {
-				std::set<Bytes>::iterator iter = _packet_hashlist.begin();
-				std::advance(iter, _packet_hashlist.size() - _hashlist_maxsize);
-				_packet_hashlist.erase(_packet_hashlist.begin(), iter);
-			}
 
 			// Cull the path request tags list if it has reached its max size
 			if (_discovery_pr_tags.size() > _max_pr_tags) {
@@ -1207,7 +1202,7 @@ DestinationEntry empty_destination_entry;
 					TRACE("Transport::outbound: Packet transmission allowed");
 					if (!stored_hash) {
 						// CBA ACCUMULATES
-						_packet_hashlist.insert(packet.packet_hash());
+						_remember_packet_hash(packet.packet_hash());
 						stored_hash = true;
 					}
 
@@ -1311,7 +1306,7 @@ DestinationEntry empty_destination_entry;
 		}
 	}
 
-	if (_packet_hashlist.find(packet.packet_hash()) == _packet_hashlist.end()) {
+	if (!_has_packet_hash(packet.packet_hash())) {
 		TRACE("Transport::packet_filter: packet not previously seen");
 		return true;
 	}
@@ -1389,7 +1384,7 @@ DestinationEntry empty_destination_entry;
 	}
 
 	//p if not packet.packet_hash in Transport.packet_hashlist and not packet.packet_hash in Transport.packet_hashlist_prev:
-	if (_packet_hashlist.find(packet.packet_hash()) == _packet_hashlist.end()) {
+	if (!_has_packet_hash(packet.packet_hash())) {
 		TRACE("Transport::packet_filter: packet not previously seen");
 		return true;
 	}
@@ -1580,7 +1575,7 @@ DestinationEntry empty_destination_entry;
 		}
 		if (remember_packet_hash) {
 			// CBA ACCUMULATES
-			_packet_hashlist.insert(packet.packet_hash());
+			_remember_packet_hash(packet.packet_hash());
 		}
 
 		// CBA Currently this packet cache is a noop since it's not forced
@@ -1882,7 +1877,7 @@ DestinationEntry empty_destination_entry;
 						transmit(outbound_interface, new_raw);
 						link_entry._timestamp = OS::time();
 						// Deferred hashlist insertion for link transport packets
-						_packet_hashlist.insert(packet.packet_hash());
+						_remember_packet_hash(packet.packet_hash());
 					}
 					else {
 						//p pass
@@ -4598,7 +4593,7 @@ TRACEF("Transport::write_path_table: buffer size %lu bytes", Persistence::_buffe
 	for (auto& [interface_hash, interface] : _interfaces) {
 		interface_announces += interface.announce_queue().size();
 	}
-	VERBOSEF("phl: %u rcp: %u lt: %u pl: %u al: %u tun: %u", _packet_hashlist.size(), _receipts.size(), _link_table.size(), _pending_links.size(), _active_links.size(), _tunnels.size());
+	VERBOSEF("phl: %u rcp: %u lt: %u pl: %u al: %u tun: %u", packet_hashlist_size(), _receipts.size(), _link_table.size(), _pending_links.size(), _active_links.size(), _tunnels.size());
 	VERBOSEF("pin: %u pout: %u padd: %u dpr: %u ikd: %u ia: %u\r\n", _packets_received, _packets_sent, _destinations_added, destination_path_responses, Identity::known_destinations().size(), interface_announces);
 #endif // RNS_DEBUG_METRICS
 
