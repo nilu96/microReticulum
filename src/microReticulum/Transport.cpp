@@ -3145,42 +3145,52 @@ Deregisters an announce handler.
 	}
 }
 
-/*p
+/*static*/ bool Transport::mark_path_unresponsive(const Bytes& destination_hash) {
+	DestinationEntry destination_entry;
+	_new_path_table.get(destination_hash, destination_entry);
+	if (destination_entry) {
+		destination_entry._state = Type::Transport::STATE_UNRESPONSIVE;
+		return true;
+	}
+	else {
+		return false;
+	}
+}
 
-    @staticmethod
-    def mark_path_unresponsive(destination_hash):
-        if destination_hash in Transport.destination_table:
-            Transport.path_states[destination_hash] = Transport.STATE_UNRESPONSIVE
-            return True
-        else:
-            return False
+/*static*/ bool Transport::mark_path_responsive(const Bytes& destination_hash) {
+	DestinationEntry destination_entry;
+	_new_path_table.get(destination_hash, destination_entry);
+	if (destination_entry) {
+		destination_entry._state = Type::Transport::STATE_RESPONSIVE;
+		return true;
+	}
+	else {
+		return false;
+	}
+}
 
-    @staticmethod
-    def mark_path_responsive(destination_hash):
-        if destination_hash in Transport.destination_table:
-            Transport.path_states[destination_hash] = Transport.STATE_RESPONSIVE
-            return True
-        else:
-            return False
+/*static*/ bool Transport::mark_path_unknown_state(const Bytes& destination_hash) {
+	DestinationEntry destination_entry;
+	_new_path_table.get(destination_hash, destination_entry);
+	if (destination_entry) {
+		destination_entry._state = Type::Transport::STATE_UNKNOWN;
+		return true;
+	}
+	else {
+		return false;
+	}
+}
 
-    @staticmethod
-    def mark_path_unknown_state(destination_hash):
-        if destination_hash in Transport.destination_table:
-            Transport.path_states[destination_hash] = Transport.STATE_UNKNOWN
-            return True
-        else:
-            return False
-
-    @staticmethod
-    def path_is_unresponsive(destination_hash):
-        if destination_hash in Transport.path_states:
-            if Transport.path_states[destination_hash] == Transport.STATE_UNRESPONSIVE:
-                return True
-
-        return False
-
-*/
-
+/*static*/ bool Transport::path_is_unresponsive(const Bytes& destination_hash) {
+	DestinationEntry destination_entry;
+	_new_path_table.get(destination_hash, destination_entry);
+	if (destination_entry) {
+		return (destination_entry._state == Type::Transport::STATE_UNRESPONSIVE);
+	}
+	else {
+		return false;
+	}
+}
 
 /*p
     @staticmethod

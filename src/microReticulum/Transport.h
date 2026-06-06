@@ -315,6 +315,10 @@ namespace RNS {
 		static double first_hop_timeout(const Bytes& destination_hash);
 		static double extra_link_proof_timeout(const Interface& interface);
 		static bool expire_path(const Bytes& destination_hash);
+		static bool mark_path_unresponsive(const Bytes& destination_hash);
+		static bool mark_path_responsive(const Bytes& destination_hash);
+		static bool mark_path_unknown_state(const Bytes& destination_hash);
+		static bool path_is_unresponsive(const Bytes& destination_hash);
 		//static void request_path(const Bytes& destination_hash, const Interface& on_interface = {Type::NONE}, const Bytes& tag = {}, bool recursive = false);
 		static void request_path(const Bytes& destination_hash, const Interface& on_interface, const Bytes& tag = {}, bool recursive = false);
 		static void request_path(const Bytes& destination_hash);
