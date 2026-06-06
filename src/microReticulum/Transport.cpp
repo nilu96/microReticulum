@@ -2305,7 +2305,7 @@ DestinationEntry empty_destination_entry;
 							else {
 								ttl = DESTINATION_TIMEOUT;
 							}
-							if (_new_path_table.put(packet.destination_hash().collection(), destination_table_entry, ttl)) {
+							if (_new_path_table.put(packet.destination_hash().collection(), destination_table_entry, ttl, announce_hops)) {
 								TRACEF("Added destination %s to path table!", packet.destination_hash().toHex().c_str());
 								++_destinations_added;
 							}
