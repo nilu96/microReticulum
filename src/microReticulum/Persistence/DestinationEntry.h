@@ -63,6 +63,7 @@ public:
 	RNS::Bytes _received_from;
 	uint8_t _hops = 0;
 	double _expires = 0;
+	Type::Transport::state _state = Type::Transport::STATE_UNKNOWN;
 	std::set<RNS::Bytes> _random_blobs;
 	Interface _receiving_interface = {Type::NONE};
 	Packet _announce_packet = {Type::NONE};
@@ -74,6 +75,7 @@ public:
 			" received_from=" + _received_from.toHex() +
 			" hops=" + std::to_string(_hops) +
 			" expires=" + std::to_string(_expires) +
+			" state=" + std::to_string(_state) +
 			//" random_blobs=" + _random_blobs +
 			" receiving_interface=" + receiving_interface_hash().toHex() +
 			" announce_packet=" + announce_packet_hash().toHex();
