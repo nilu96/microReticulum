@@ -25,6 +25,7 @@
 #include <microStore/HeapStore.h>
 #endif
 #include <microStore/TypedStore.h>
+#include <microStore/TypedTieredStore.h>
 #include <microStore/Codec.h>
 
 #include <set>
@@ -90,11 +91,21 @@ public:
 using PathTable = std::map<RNS::Bytes, DestinationEntry, std::less<RNS::Bytes>, Utilities::Memory::ContainerAllocator<std::pair<const RNS::Bytes, DestinationEntry>>>;
 
 #if defined(RNS_USE_FS) && defined(RNS_PERSIST_PATHS)
+struct BytesHash {
+    // The operator() must take your Key type and return a std::size_t
+    size_t operator()(const Bytes& key) const {
+		if (key.size() < 4) return 0;
+		const uint8_t* key_data = key.data();
+		size_t hash = key_data[0] | (key_data[1] << 8) | (key_data[2] << 16) | (key_data[3] << 24);
+        return hash;
+    }
+};
 using PathStore = microStore::BasicFileStore<Utilities::Memory::ContainerAllocator<uint8_t>>;
+using NewPathTable = microStore::TypedTieredStore<Bytes, DestinationEntry, BytesHash, PathStore>;
 #else
 using PathStore = microStore::BasicHeapStore<Utilities::Memory::ContainerAllocator<uint8_t>>;
-#endif
 using NewPathTable = microStore::TypedStore<Bytes, DestinationEntry, PathStore>;
+#endif
 
 } }
 
