@@ -24,6 +24,7 @@
 #include "Cryptography/Random.h"
 #include "Utilities/OS.h"
 #include "Utilities/Persistence.h"
+#include "DirectNeighbors.h"
 
 #include <MsgPack.h>
 
@@ -289,6 +290,8 @@ DestinationEntry empty_destination_entry;
 			_mgmt_hashes.insert(_network_destination.hash());
 		//}
 */
+
+		DirectNeighbors::init();
 	}
 	catch (const std::exception& e) {
 		ERROR("An exception occurred while starting Transport.");
@@ -815,6 +818,8 @@ DestinationEntry empty_destination_entry;
 			//	persist_data();
 			//	_last_saved = OS::time();
 			//}
+
+			DirectNeighbors::trigger_wait_for_all_neighbors();
 		}
 		else {
 			// Transport jobs were locked, do nothing
