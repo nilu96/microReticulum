@@ -26,40 +26,102 @@
 	#define msg (msg)
 #endif
 
-#define LOG(msg, level) (RNS::log(msg, level))
-#define LOGF(level, msg, ...) (RNS::logf(level, msg, __VA_ARGS__))
-#define HEAD(msg, level) (RNS::head(msg, level))
-#define HEADF(level, msg, ...) (RNS::headf(level, msg, __VA_ARGS__))
+#define RNS_LOG_LEVEL_NONE     0
+#define RNS_LOG_LEVEL_CRITICAL 1
+#define RNS_LOG_LEVEL_ERROR    2
+#define RNS_LOG_LEVEL_WARNING  3
+#define RNS_LOG_LEVEL_NOTICE   4
+#define RNS_LOG_LEVEL_INFO     5
+#define RNS_LOG_LEVEL_VERBOSE  6
+#define RNS_LOG_LEVEL_DEBUG    7
+#define RNS_LOG_LEVEL_TRACE    8
+#define RNS_LOG_LEVEL_MEM      9
 
-#define CRITICAL(msg) (RNS::log(msg, RNS::LOG_CRITICAL))
-#define CRITICALF(msg, ...) (RNS::logf(RNS::LOG_CRITICAL, msg, __VA_ARGS__))
-#define ERROR(msg) (RNS::log(msg, RNS::LOG_ERROR))
-#define ERRORF(msg, ...) (RNS::logf(RNS::LOG_ERROR, msg, __VA_ARGS__))
-#define WARNING(msg) (RNS::log(msg, RNS::LOG_WARNING))
-#define WARNINGF(msg, ...) (RNS::logf(RNS::LOG_WARNING, msg, __VA_ARGS__))
-#define NOTICE(msg) (RNS::log(msg, RNS::LOG_NOTICE))
-#define NOTICEF(msg, ...) (RNS::logf(RNS::LOG_NOTICE, msg, __VA_ARGS__))
-#define INFO(msg) (RNS::log(msg, RNS::LOG_INFO))
-#define INFOF(msg, ...) (RNS::logf(RNS::LOG_INFO, msg, __VA_ARGS__))
-#define VERBOSE(msg) (RNS::log(msg, RNS::LOG_VERBOSE))
-#define VERBOSEF(msg, ...) (RNS::logf(RNS::LOG_VERBOSE, msg, __VA_ARGS__))
-#ifndef NDEBUG
+#ifndef RNS_LOG_LEVEL
+	#warning "Defaulting to a maximum supported log level of RNS_LOG_LEVEL_VERBOSE"
+	#define RNS_LOG_LEVEL RNS_LOG_LEVEL_VERBOSE
+#endif
+
+#if RNS_LOG_LEVEL >= RNS_LOG_LEVEL_NONE
+	#define LOG(msg, level) (RNS::log(msg, level))
+	#define LOGF(level, msg, ...) (RNS::logf(level, msg, __VA_ARGS__))
+	#define HEAD(msg, level) (RNS::head(msg, level))
+	#define HEADF(level, msg, ...) (RNS::headf(level, msg, __VA_ARGS__))
+#else
+	#define LOG(ignore) ((void)0)
+	#define LOGF(...) ((void)0)
+	#define HEAD(ignore) ((void)0)
+	#define HEADF(...) ((void)0)
+#endif
+
+#if RNS_LOG_LEVEL >= RNS_LOG_LEVEL_CRITICAL
+	#define CRITICAL(msg) (RNS::log(msg, RNS::LOG_CRITICAL))
+	#define CRITICALF(msg, ...) (RNS::logf(RNS::LOG_CRITICAL, msg, __VA_ARGS__))
+#else
+	#define CRITICAL(ignore) ((void)0)
+	#define CRITICALF(...) ((void)0)
+#endif
+
+#if RNS_LOG_LEVEL >= RNS_LOG_LEVEL_ERROR
+	#define ERROR(msg) (RNS::log(msg, RNS::LOG_ERROR))
+	#define ERRORF(msg, ...) (RNS::logf(RNS::LOG_ERROR, msg, __VA_ARGS__))
+#else
+	#define ERROR(ignore) ((void)0)
+	#define ERRORF(...) ((void)0)
+#endif
+
+#if RNS_LOG_LEVEL >= RNS_LOG_LEVEL_WARNING
+	#define WARNING(msg) (RNS::log(msg, RNS::LOG_WARNING))
+	#define WARNINGF(msg, ...) (RNS::logf(RNS::LOG_WARNING, msg, __VA_ARGS__))
+#else
+	#define WARNING(ignore) ((void)0)
+	#define WARNINGF(...) ((void)0)
+#endif
+
+#if RNS_LOG_LEVEL >= RNS_LOG_LEVEL_NOTICE
+	#define NOTICE(msg) (RNS::log(msg, RNS::LOG_NOTICE))
+	#define NOTICEF(msg, ...) (RNS::logf(RNS::LOG_NOTICE, msg, __VA_ARGS__))
+#else
+	#define NOTICE(ignore) ((void)0)
+	#define NOTICEF(...) ((void)0)
+#endif
+
+#if RNS_LOG_LEVEL >= RNS_LOG_LEVEL_INFO
+	#define INFO(msg) (RNS::log(msg, RNS::LOG_INFO))
+	#define INFOF(msg, ...) (RNS::logf(RNS::LOG_INFO, msg, __VA_ARGS__))
+#else
+	#define INFO(ignore) ((void)0)
+	#define INFOF(...) ((void)0)
+#endif
+
+#if RNS_LOG_LEVEL >= RNS_LOG_LEVEL_VERBOSE
+	#define VERBOSE(msg) (RNS::log(msg, RNS::LOG_VERBOSE))
+	#define VERBOSEF(msg, ...) (RNS::logf(RNS::LOG_VERBOSE, msg, __VA_ARGS__))
+#else
+	#define VERBOSE(ignore) ((void)0)
+	#define VERBOSEF(...) ((void)0)
+#endif
+
+#if RNS_LOG_LEVEL >= RNS_LOG_LEVEL_DEBUG
 	#define DEBUG(msg) (RNS::log(msg, RNS::LOG_DEBUG))
 	#define DEBUGF(msg, ...) (RNS::logf(RNS::LOG_DEBUG, msg, __VA_ARGS__))
-	#define TRACE(msg) (RNS::log(msg, RNS::LOG_TRACE))
-	#define TRACEF(msg, ...) (RNS::logf(RNS::LOG_TRACE, msg, __VA_ARGS__))
-	#if defined(RNS_MEM_LOG)
-		#define MEM(msg) (RNS::log(msg, RNS::LOG_MEM))
-		#define MEMF(msg, ...) (RNS::logf(RNS::LOG_MEM, msg, __VA_ARGS__))
-	#else
-		#define MEM(ignore) ((void)0)
-		#define MEMF(...) ((void)0)
-	#endif
 #else
 	#define DEBUG(ignore) ((void)0)
 	#define DEBUGF(...) ((void)0)
+#endif
+
+#if RNS_LOG_LEVEL >= RNS_LOG_LEVEL_TRACE
+	#define TRACE(msg) (RNS::log(msg, RNS::LOG_TRACE))
+	#define TRACEF(msg, ...) (RNS::logf(RNS::LOG_TRACE, msg, __VA_ARGS__))
+#else
 	#define TRACE(ignore) ((void)0)
 	#define TRACEF(...) ((void)0)
+#endif
+
+#if RNS_LOG_LEVEL >= RNS_LOG_LEVEL_MEM
+	#define MEM(msg) (RNS::log(msg, RNS::LOG_MEM))
+	#define MEMF(msg, ...) (RNS::logf(RNS::LOG_MEM, msg, __VA_ARGS__))
+#else
 	#define MEM(ignore) ((void)0)
 	#define MEMF(...) ((void)0)
 #endif
@@ -69,16 +131,16 @@
 namespace RNS {
 
 	enum LogLevel {
-		LOG_NONE     = 0,
-		LOG_CRITICAL = 1,
-		LOG_ERROR    = 2,
-		LOG_WARNING  = 3,
-		LOG_NOTICE   = 4,
-		LOG_INFO     = 5,
-		LOG_VERBOSE  = 6,
-		LOG_DEBUG    = 7,
-		LOG_TRACE    = 8,
-		LOG_MEM      = 9
+		LOG_NONE     = RNS_LOG_LEVEL_NONE,
+		LOG_CRITICAL = RNS_LOG_LEVEL_CRITICAL,
+		LOG_ERROR    = RNS_LOG_LEVEL_ERROR,
+		LOG_WARNING  = RNS_LOG_LEVEL_WARNING,
+		LOG_NOTICE   = RNS_LOG_LEVEL_NOTICE,
+		LOG_INFO     = RNS_LOG_LEVEL_INFO,
+		LOG_VERBOSE  = RNS_LOG_LEVEL_VERBOSE,
+		LOG_DEBUG    = RNS_LOG_LEVEL_DEBUG,
+		LOG_TRACE    = RNS_LOG_LEVEL_TRACE,
+		LOG_MEM      = RNS_LOG_LEVEL_MEM
 	};
 
 	using log_callback = void(*)(const char* msg, LogLevel level);

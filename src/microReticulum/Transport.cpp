@@ -60,6 +60,10 @@ using namespace RNS::Persistence;
 #define RNS_PR_TAGS_MAX	 32
 #endif
 
+#ifndef RNS_SAME_INTERFACE_PATH_REQUESTS
+#define RNS_SAME_INTERFACE_PATH_REQUESTS 1
+#endif
+
 /*static*/ Transport::InterfaceTable Transport::_interfaces;
 /*static*/ Transport::DestinationTable Transport::_destinations;
 /*static*/ std::set<Link> Transport::_pending_links;
@@ -265,7 +269,7 @@ DestinationEntry empty_destination_entry;
 			//_remote_management_destination.register_request_handler("/path", remote_path_handler, Type::Destination::ALLOW_ALL);
 			_mgmt_destinations.insert(_remote_management_destination);
 			_mgmt_hashes.insert(_remote_management_destination.hash());
-			NOTICEF("Enabled remote management on %s", _remote_management_destination.toString().c_str());
+			NOTICEF("Enabled remote management on <%s>", _remote_management_destination.toString().c_str());
 		}
 
 /*p
@@ -311,7 +315,7 @@ DestinationEntry empty_destination_entry;
 #if defined(RNS_USE_FS) && defined(RNS_PERSIST_PATHS)
 		// CBA microStore
 		if (Utilities::OS::get_filesystem()) {
-			INFOF("FileSystem available: %lu", Utilities::OS::get_filesystem().storageAvailable());
+			INFOF("FileSystem available: %lu bytes", Utilities::OS::get_filesystem().storageAvailable());
 			// CBA Must pass time offset into microStore for accurate timestamps on devices without a real-time clock
 #if defined(ARDUINO)
 			microStore::set_time_offset(Utilities::OS::getTimeOffset() / 1000);
@@ -343,7 +347,7 @@ DestinationEntry empty_destination_entry;
 			DEBUGF("Created probe responder destination %s", _probe_destination.hash().toHex().c_str());
 			//_probe_destination.announce();
 			_mgmt_destinations.insert(_probe_destination);
-			NOTICEF("Transport Instance will respond to probe requests on %s", _probe_destination.toString().c_str());
+			NOTICEF("Transport instance will respond to probe requests on <%s>", _probe_destination.hash().toHex().c_str());
 		}
 
 		VERBOSEF("Transport instance %s started", _identity.toString().c_str());
@@ -2477,27 +2481,32 @@ DestinationEntry empty_destination_entry;
 								}
 								Bytes peer_pub_bytes = packet.data().mid(Type::Identity::SIGLENGTH/8, Type::Link::ECPUBSIZE/2);
 								Identity peer_identity = Identity::recall(link_entry._destination_hash);
-								Bytes peer_sig_pub_bytes = peer_identity.get_public_key().mid(Type::Link::ECPUBSIZE/2, Type::Link::ECPUBSIZE/2);
+								if (peer_identity) {
+									Bytes peer_sig_pub_bytes = peer_identity.get_public_key().mid(Type::Link::ECPUBSIZE/2, Type::Link::ECPUBSIZE/2);
 
-								Bytes signed_data = packet.destination_hash() + peer_pub_bytes + peer_sig_pub_bytes + signalling_bytes;
-								Bytes signature = packet.data().left(Type::Identity::SIGLENGTH/8);
+									Bytes signed_data = packet.destination_hash() + peer_pub_bytes + peer_sig_pub_bytes + signalling_bytes;
+									Bytes signature = packet.data().left(Type::Identity::SIGLENGTH/8);
 
-								if (peer_identity.validate(signature, signed_data)) {
-									TRACEF("Link request proof validated for transport via %s", link_entry._receiving_interface.toString().c_str());
-									//p new_raw = packet.raw[0:1]
-									// CBA RESERVE
-									//Bytes new_raw = packet.raw().left(1);
-									Bytes new_raw(512);
-									new_raw << packet.raw().left(1);
-									//p new_raw += struct.pack("!B", packet.hops)
-									new_raw << packet.hops();
-									//p new_raw += packet.raw[2:]
-									new_raw << packet.raw().mid(2);
-									link_entry._validated = true;
-									transmit(link_entry._receiving_interface, new_raw);
+									if (peer_identity.validate(signature, signed_data)) {
+										TRACEF("Link request proof validated for transport via %s", link_entry._receiving_interface.toString().c_str());
+										//p new_raw = packet.raw[0:1]
+										// CBA RESERVE
+										//Bytes new_raw = packet.raw().left(1);
+										Bytes new_raw(512);
+										new_raw << packet.raw().left(1);
+										//p new_raw += struct.pack("!B", packet.hops)
+										new_raw << packet.hops();
+										//p new_raw += packet.raw[2:]
+										new_raw << packet.raw().mid(2);
+										link_entry._validated = true;
+										transmit(link_entry._receiving_interface, new_raw);
+									}
+									else {
+										DEBUGF("Invalid link request proof in transport for link %s, dropping proof.", packet.destination_hash().toHex().c_str());
+									}
 								}
 								else {
-									DEBUGF("Invalid link request proof in transport for link %s, dropping proof.", packet.destination_hash().toHex().c_str());
+									DEBUGF("Could not recall identity for link request proof destination %s, dropping proof.", link_entry._destination_hash.toHex().c_str());
 								}
 							}
 						}
@@ -3133,16 +3142,21 @@ Deregisters an announce handler.
 /*static*/ bool Transport::expire_path(const Bytes& destination_hash) {
 	// CBA microStore
 	//auto& destination_entry = get_path(destination_hash);
+/*
 	DestinationEntry destination_entry;
 	_new_path_table.get(destination_hash, destination_entry);
 	if (destination_entry) {
 		destination_entry._timestamp = 0;
+		_new_path_table.put(destination_hash, destination_entry);
 		_tables_last_culled = 0;
 		return true;
 	}
 	else {
 		return false;
 	}
+*/
+	// Just removing the path table entry directly
+	return _new_path_table.remove(destination_hash);
 }
 
 /*p
@@ -3615,7 +3629,7 @@ static void remote_path_pack_rate_entry(MsgPack::Packer& p,
 			// list (nor do we likely want to on resource-constrained devices) so leaving this as a no-op for now.
 
 			size_t match_count = 0;
-			for (auto& path : _new_path_table) {
+			for (const auto& path : _new_path_table) {
 				if (req.dest_hash.size() > 0 && path.key != req.dest_hash) continue;
 				if (req.max_hops_present && path.value._hops > req.max_hops) continue;
 				match_count++;
@@ -3631,7 +3645,7 @@ static void remote_path_pack_rate_entry(MsgPack::Packer& p,
 			}
 */
 			match_count = 0;
-			for (auto& path : _new_path_table) {
+			for (const auto& path : _new_path_table) {
 				if (req.dest_hash.size() > 0 && path.key != req.dest_hash) continue;
 				if (req.max_hops_present && path.value._hops > req.max_hops) continue;
 				remote_path_pack_path_entry(p, path.key, path.value);
@@ -3909,10 +3923,15 @@ TRACEF("announce_packet str: %s", announce_packet.toString().c_str());
 			}});
 
 			for (auto& [hash, interface] : _interfaces) {
+				// DIVERGENCE
+
+#if RNS_SAME_INTERFACE_PATH_REQUESTS
 				// CBA EXPERIMENTAL forwarding path requests even on requestor interface in order to support
 				//  path-finding over LoRa mesh
-				//if (interface != attached_interface) {
 				if (true) {
+#else
+				//if (interface != attached_interface) {
+#endif
 					TRACEF("Transport::path_request: requesting path on interface %s", interface.toString().c_str());
 					// Use the previously extracted tag from this path request
 					// on the new path requests as well, to avoid potential loops
@@ -4816,6 +4835,16 @@ TRACEF("Transport::write_path_table: buffer size %lu bytes", Persistence::_buffe
 	if (iter != _destinations.end()) {
 		TRACEF("Transport::find_destination_from_hash: Found destination %s", (*iter).second.toString().c_str());
 		return (*iter).second;
+	}
+
+	return {Type::NONE};
+}
+
+/*static*/ Packet Transport::find_announce_packet_from_hash(const Bytes& destination_hash) {
+	TRACEF("Transport::find_announce_packet_from_hash: Searching for announce packet for destination %s", destination_hash.toHex().c_str());
+	DestinationEntry destination_entry;
+	if (_new_path_table.get(destination_hash, destination_entry)) {
+		return destination_entry.announce_packet();
 	}
 
 	return {Type::NONE};

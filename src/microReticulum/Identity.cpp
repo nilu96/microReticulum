@@ -37,6 +37,11 @@ using namespace RNS::Utilities;
 #define RNS_KNOWN_DESTINATIONS_MAX 100
 #endif
 
+#ifndef RNS_IDENTITY_ANNOUNCE_RECALL
+#define RNS_IDENTITY_ANNOUNCE_RECALL 1
+#endif
+
+
 /*static*/ Identity::IdentityTable Identity::_known_destinations;
 /*static*/ bool Identity::_saving_known_destinations = false;
 // CBA
@@ -243,6 +248,7 @@ Recall identity for a destination hash.
 */
 /*static*/ Identity Identity::recall(const Bytes& destination_hash) {
 	TRACE("Identity::recall...");
+
 	auto iter = _known_destinations.find(destination_hash);
 	if (iter != _known_destinations.end()) {
 		TRACEF("Identity::recall: Found identity entry for destination %s", destination_hash.toHex().c_str());
@@ -252,19 +258,43 @@ Recall identity for a destination hash.
 		identity.app_data(identity_data._app_data);
 		return identity;
 	}
-	else {
-		TRACEF("Identity::recall: Unable to find identity entry for destination %s, performing destination lookup...", destination_hash.toHex().c_str());
-		Destination registered_destination(Transport::find_destination_from_hash(destination_hash));
-		if (registered_destination) {
-			TRACEF("Identity::recall: Found destination %s", destination_hash.toHex().c_str());
-			Identity identity(false);
-			identity.load_public_key(registered_destination.identity().get_public_key());
-			identity.app_data({Bytes::NONE});
-			return identity;
-		}
-		TRACEF("Identity::recall: Unable to find destination %s", destination_hash.toHex().c_str());
-		return {Type::NONE};
+
+#if RNS_IDENTITY_ANNOUNCE_RECALL
+	// DIVERGENCE
+	// Since the path table stores the latest announce for each destination (which contains the needed public key etc.),
+	// the identity can be restored even if it is not cached in _known_destinations.
+	TRACEF("Identity::recall: Unable to find identity entry for destination %s, performing announce lookup...", destination_hash.toHex().c_str());
+	Packet announce_packet = Transport::find_announce_packet_from_hash(destination_hash);
+	if (announce_packet) {
+		TRACEF("Identity::recall: Extracted identity entry from announce packet for destination %s", destination_hash.toHex().c_str());
+		Bytes public_key = announce_packet.data().left(KEYSIZE/8);
+		Bytes app_data = announce_packet.data().mid(KEYSIZE/8 + NAME_HASH_LENGTH/8 + RANDOM_HASH_LENGTH/8 + SIGLENGTH/8);	
+
+		Identity identity(false);
+		identity.load_public_key(public_key);
+		identity.app_data(app_data);
+
+		remember(announce_packet.get_hash(), destination_hash, public_key, app_data);
+		return identity;
 	}
+#endif
+
+	TRACEF("Identity::recall: Unable to find identity entry for destination %s, performing destination lookup...", destination_hash.toHex().c_str());
+	Destination registered_destination(Transport::find_destination_from_hash(destination_hash));
+	if (registered_destination) {
+		TRACEF("Identity::recall: Found destination %s", destination_hash.toHex().c_str());
+		if (!registered_destination.identity()) {
+			TRACEF("Identity::recall: Destination %s has no associated identity", destination_hash.toHex().c_str());
+			return {Type::NONE};
+		}
+		Identity identity(false);
+		identity.load_public_key(registered_destination.identity().get_public_key());
+		identity.app_data({Bytes::NONE});
+		return identity;
+	}
+
+	TRACEF("Identity::recall: Unable to find destination %s", destination_hash.toHex().c_str());
+	return {Type::NONE};
 }
 
 /*
