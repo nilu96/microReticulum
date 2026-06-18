@@ -21,11 +21,11 @@
 // CBA microStore
 #if defined(RNS_USE_FS) && defined(RNS_PERSIST_PATHS)
 #include <microStore/FileStore.h>
+#include <microStore/TypedTieredStore.h>
 #else
 #include <microStore/HeapStore.h>
 #endif
 #include <microStore/TypedStore.h>
-#include <microStore/TypedTieredStore.h>
 #include <microStore/Codec.h>
 
 #include <set>
@@ -102,6 +102,7 @@ struct BytesHash {
 };
 using PathStore = microStore::BasicFileStore<Utilities::Memory::ContainerAllocator<uint8_t>>;
 using NewPathTable = microStore::TypedTieredStore<Bytes, DestinationEntry, BytesHash, PathStore>;
+#define RNS_PATH_TABLE_SYNC_ENABLED
 #else
 using PathStore = microStore::BasicHeapStore<Utilities::Memory::ContainerAllocator<uint8_t>>;
 using NewPathTable = microStore::TypedStore<Bytes, DestinationEntry, PathStore>;

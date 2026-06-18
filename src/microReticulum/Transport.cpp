@@ -4518,7 +4518,10 @@ TRACEF("Transport::write_path_table: buffer size %lu bytes", Persistence::_buffe
 	write_packet_hashlist();
 	write_path_table();
 	write_tunnel_table();
-	try { _new_path_table.sync(); } catch (const std::exception& e) { }
+	
+	#if defined(RNS_PATH_TABLE_SYNC_ENABLED)
+		_new_path_table.sync();
+	#endif
 }
 
 /*static*/ void Transport::clean_caches() {
