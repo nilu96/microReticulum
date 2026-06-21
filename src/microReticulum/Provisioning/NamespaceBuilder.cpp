@@ -34,7 +34,7 @@ namespace RNS { namespace Provisioning {
 
 	// Helper to grab the current scope namespace; if registration is
 	// outside any scope, emit a warning and return nullptr.
-	static Namespace* scope(Manager* mgr, const char* op) {
+	static Namespace* scope(Provisioner* mgr, const char* op) {
 		Namespace* ns = mgr ? mgr->current_build_scope() : nullptr;
 		if (!ns) {
 			WARNINGF("NamespaceBuilder::%s called with no open namespace scope", op);
@@ -44,11 +44,11 @@ namespace RNS { namespace Provisioning {
 
 	// -- Scope control -------------------------------------------------------
 
-	NamespaceBuilder& NamespaceBuilder::namespace_(const char* name, nid_t id) {
-		// Delegates to Manager::namespace_, which pushes the new namespace
+	NamespaceBuilder& NamespaceBuilder::register_namespace(const char* name, nid_t id) {
+		// Delegates to Provisioner::namespace_, which pushes the new namespace
 		// onto the scope stack. The returned builder value is discarded —
-		// it's identical to this one (both reference the same Manager).
-		if (_mgr) _mgr->namespace_(name, id);
+		// it's identical to this one (both reference the same Provisioner).
+		if (_mgr) _mgr->register_namespace(name, id);
 		return *this;
 	}
 
@@ -293,6 +293,13 @@ namespace RNS { namespace Provisioning {
 			f.setter = [s = std::move(setter)](const Value&) -> bool { return s(); };
 		}
 		warn_if_dup(ns, ns->add_field(std::move(f)), id, name);
+		return *this;
+	}
+
+	NamespaceBuilder& NamespaceBuilder::on_commit(CommitCallback cb) {
+		Namespace* ns = scope(_mgr, "on_commit");
+		if (!ns) return *this;
+		ns->on_commit(std::move(cb));
 		return *this;
 	}
 
