@@ -51,7 +51,7 @@ void testSerializeDestinationTable() {
 	received.assignHex("deadbeef");
 	RNS::Bytes blob;
 	blob.assignHex("b10bb10b");
-	std::set<RNS::Bytes> blobs({received, blob});
+	std::vector<RNS::Bytes> blobs({received, blob});
 	RNS::Persistence::DestinationEntry entry_one;
 	entry_one._timestamp = 1.0;
 	entry_one._received_from = received;
@@ -98,8 +98,8 @@ void testSerializeDestinationTable() {
 	uint32_t crc = RNS::Persistence::crc(map);
 	TRACEF("testSerializeDestinationTable: crc: 0x%X", crc);
 	TRACEF("testSerializeDestinationTable: stream crc: 0x%X", stream_crc);
-	TEST_ASSERT_EQUAL_UINT32(0xFC979601, crc);
-	TEST_ASSERT_EQUAL_UINT32(0xFC979601, stream_crc);
+	TEST_ASSERT_EQUAL_UINT32(0x3FD2A3C, crc);
+	TEST_ASSERT_EQUAL_UINT32(0x3FD2A3C, stream_crc);
 
 }
 
@@ -124,8 +124,8 @@ void testDeserializeDestinationTable() {
 	uint32_t crc = RNS::Persistence::crc(map);
 	TRACEF("testDeserializeDestinationTable: crc: 0x%X", crc);
 	TRACEF("testDeserializeDestinationTable: stream crc: 0x%X", stream_crc);
-	TEST_ASSERT_EQUAL_UINT32(0xFC979601, crc);
-	TEST_ASSERT_EQUAL_UINT32(0xFC979601, stream_crc);
+	TEST_ASSERT_EQUAL_UINT32(0x3FD2A3C, crc);
+	TEST_ASSERT_EQUAL_UINT32(0x3FD2A3C, stream_crc);
 
 }
 
